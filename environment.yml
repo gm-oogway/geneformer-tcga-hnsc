@@ -1,0 +1,6 @@
+name: gf
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+prefix: /home/lenovo/miniconda3/envs/gf
