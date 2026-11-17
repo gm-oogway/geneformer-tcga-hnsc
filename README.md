@@ -94,6 +94,8 @@ cd geneformer-tcga-hnsc
 bash scripts/run_all.sh
 ```
 
+**Reproducibility check (17 Nov 2026):** a fresh clone run with `run_all.sh` reproduced every result table; the only differences were in the 17th significant digit of k-means inertia values (floating-point summation order).
+
 Approximate run times on a laptop CPU: download depends on the connection (~2.4 GB); steps 02–05 a few minutes; V1 embeddings 4 min; **V2 embeddings about 90 min** (9.3 s per sample, 2.0 GB peak memory); steps 07–08 a few minutes each. Step 06 saves progress every 10 samples and resumes if interrupted.
 
 ---
