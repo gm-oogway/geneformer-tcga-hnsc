@@ -3,9 +3,9 @@
 Input : results/tables/baseline_pca.csv                 (step 04)
         data/processed/emb_V1_mean.csv, emb_V2_cls.csv, emb_V2_mean.csv   (step 06; missing ones are skipped)
         metadata/gdc_sample_sheet*.tsv, results/tables/clinical_clean.tsv
-Output: results/tables/sample_annotation.csv, k_selection.csv, cluster_labels.csv,
-        cluster_metrics.csv, ari_between_representations.csv, umap_coords.csv
-        results/figures/07_*.png
+Output: results/tables/sample_annotation.csv, k_selection.csv, umap_coords.csv,
+        cluster_labels_k<K>.csv, cluster_metrics_k<K>.csv, ari_between_representations_k<K>.csv
+        results/figures/07_*.png   (files that depend on k carry _k<K> in the name)
 
 Usage : python scripts/07_cluster.py            # k chosen from the baseline's best silhouette
         python scripts/07_cluster.py --k 4      # force a number of clusters
@@ -13,6 +13,7 @@ Usage : python scripts/07_cluster.py            # k chosen from the baseline's b
 import argparse
 import glob
 import os
+import warnings
 
 import matplotlib
 
@@ -27,6 +28,8 @@ from sklearn.decomposition import PCA
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score, silhouette_score
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
+
+warnings.filterwarnings("ignore", module="umap")  # harmless notices about future UMAP defaults
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--k", type=int, default=None)
@@ -159,15 +162,15 @@ for n in names:
         "cluster_sizes": " / ".join(map(str, np.bincount(km))),
     })
 metrics = pd.DataFrame(metrics).set_index("representation")
-labels.to_csv(f"{TAB}/cluster_labels.csv")
-metrics.to_csv(f"{TAB}/cluster_metrics.csv")
+labels.to_csv(f"{TAB}/cluster_labels_k{K}.csv")
+metrics.to_csv(f"{TAB}/cluster_metrics_k{K}.csv")
 print("\nClustering metrics:")
 print(metrics.round(3).T.to_string())
 
 # ---------- 6. Do the representations agree with each other? ----------
 ari = pd.DataFrame([[adjusted_rand_score(labels[f"{a}_kmeans"], labels[f"{b}_kmeans"]) for b in names]
                     for a in names], index=names, columns=names)
-ari.to_csv(f"{TAB}/ari_between_representations.csv")
+ari.to_csv(f"{TAB}/ari_between_representations_k{K}.csv")
 print("\nAgreement between representations (ARI of k-means labels):")
 print(ari.round(3).to_string())
 
@@ -182,7 +185,7 @@ for i in range(len(names)):
 plt.colorbar(im, label="Adjusted Rand index")
 ax.set_title(f"Agreement of k-means clusters (k={K})")
 plt.tight_layout()
-plt.savefig(f"{FIG}/07_ari_between_representations.png", dpi=150)
+plt.savefig(f"{FIG}/07_ari_between_representations_k{K}.png", dpi=150)
 plt.close()
 
 # ---------- 7. Figures: clusters on the UMAP, and dendrograms ----------
@@ -190,7 +193,7 @@ fig, axes = plt.subplots(1, len(names), figsize=(4.6 * len(names), 4.2), squeeze
 for c, n in enumerate(names):
     scatter(axes[0, c], coords[n].loc[tum.index], labels[f"{n}_kmeans"].values, f"{n}: k-means clusters (k={K})")
 plt.tight_layout()
-plt.savefig(f"{FIG}/07_umap_clusters.png", dpi=150)
+plt.savefig(f"{FIG}/07_umap_clusters_k{K}.png", dpi=150)
 plt.close()
 
 fig, axes = plt.subplots(1, len(names), figsize=(4.6 * len(names), 3.8), squeeze=False)
