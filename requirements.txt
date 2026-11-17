@@ -49,7 +49,6 @@ formulaic==1.2.2
 fqdn==1.6.0
 frozenlist==1.8.0
 fsspec==2025.3.0
-geneformer @ file:///home/lenovo/tools/Geneformer
 greenlet==3.5.6
 grpcio==1.85.1
 h11==0.16.0
