@@ -60,6 +60,7 @@ ann["smoking"] = ann["smoking_status"].map(
     lambda s: np.nan if pd.isna(s) else "Never" if "Non-Smoker" in s else "Current" if s == "Current Smoker" else "Former")
 ann["stage_num"] = ann["stage"].map({"I": 1, "II": 2, "III": 3, "IV": 4})
 ann["OS_years"] = ann["OS_time"] / 365.25
+ann["collection_site"] = ann.index.str[5:7]  # TCGA tissue source site (hospital): a classic batch variable
 
 # Programme scores: average z-score of the programme's genes (log-CPM)
 X = pd.DataFrame(adata.X.toarray() if hasattr(adata.X, "toarray") else np.asarray(adata.X),
@@ -71,7 +72,7 @@ for prog, genes in PROGRAMMES.items():
 
 reps = sorted({c.rsplit("_", 1)[0] for c in labels.columns if c.endswith("_kmeans")},
               key=lambda r: (r != "baseline", r))
-CATEGORICAL = ["site", "stage", "sex", "smoking", "grade"]
+CATEGORICAL = ["site", "stage", "sex", "smoking", "grade", "collection_site"]
 CONTINUOUS = ["age", "library_size_M", "n_genes_detected"] + list(PROGRAMMES)
 print(f"k = {K} | {len(ann)} primary tumours | representations: {', '.join(reps)}")
 
@@ -119,9 +120,11 @@ for i, rep in enumerate(reps):
     for c in sorted(d["cl"].unique()):
         m = d["cl"] == c
         KaplanMeierFitter().fit(d.loc[m, "OS_years"], d.loc[m, "OS_event"],
-                                label=f"cluster {c} (n={m.sum()})").plot_survival_function(ax=ax, ci_show=False)
+                                label=f"cluster {c} (n={m.sum()})").plot_survival_function(ax=ax, ci_show=False, show_censors=True,
+                                                                           censor_styles={"ms": 4, "marker": "|"})
     lr = multivariate_logrank_test(d["OS_years"], d["cl"], d["OS_event"])
-    ax.set(title=f"{rep}  (log-rank p = {lr.p_value:.3g})", xlabel="Years", ylabel="Overall survival", ylim=(0, 1.02))
+    ax.set(title=f"{rep}  (log-rank p = {lr.p_value:.3g})", xlabel="Years (display cut at 10; few patients beyond)",
+           ylabel="Overall survival", ylim=(0, 1.02), xlim=(0, 10))
     ax.title.set_fontsize(10)
 
     # Cox model: cluster effect adjusted for age and stage; reference = largest cluster
